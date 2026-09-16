@@ -25,7 +25,7 @@ export default function Topbar({
       <div className="brand">
         <span className="brand-mark">⚡</span>
         <span className="brand-name">
-          Volt<strong>Pad</strong>
+          Volt<strong>Pad</strong> by angking
         </span>
       </div>
 
