@@ -86,7 +86,7 @@ export async function exportPDF(worldEl, doc, title) {
   pdf.setFontSize(8.5);
   pdf.setTextColor(130, 150, 190);
   pdf.text(
-    `VoltPad  •  generated ${new Date().toLocaleString()}  •  ${doc.nodes.length} components  •  ${doc.wires.length} conductors`,
+    `VoltPad | by angking  •  generated ${new Date().toLocaleString()}  •  ${doc.nodes.length} components  •  ${doc.wires.length} conductors`,
     margin,
     margin + 18
   );
