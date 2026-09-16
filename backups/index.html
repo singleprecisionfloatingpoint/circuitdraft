@@ -1,0 +1,1304 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Circuit Draft — Wiring Diagram Designer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #E7EAEE;
+    --panel: #FFFFFF;
+    --panel-alt: #F1F3F6;
+    --border: #D2D7DE;
+    --border-soft: #E1E4E9;
+    --ink: #191B1F;
+    --ink-muted: #5B6472;
+    --ink-faint: #8A92A0;
+    --copper: #B5642A;
+    --copper-hover: #9C5323;
+    --copper-soft: rgba(181,100,42,0.14);
+    --steel: #2F5D8A;
+    --success: #3F8F63;
+    --danger: #C0392B;
+    --danger-soft: rgba(192,57,43,0.12);
+    --blueprint: #0E1B2B;
+    --blueprint-grid: #1A2C42;
+    --blueprint-grid-major: #24405F;
+    --symbol-ink: #D7E3F0;
+    --symbol-ink-dim: #7E93AC;
+    --shadow-1: 0 1px 2px rgba(20,24,30,0.06);
+    --radius-sm: 4px;
+    --radius-md: 7px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #121316;
+      --panel: #1B1D21;
+      --panel-alt: #202226;
+      --border: #2E3137;
+      --border-soft: #26282D;
+      --ink: #EDEEF0;
+      --ink-muted: #9AA1AC;
+      --ink-faint: #6B7280;
+      --copper: #CE8148;
+      --copper-hover: #E0925A;
+      --copper-soft: rgba(206,129,72,0.18);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #121316;
+    --panel: #1B1D21;
+    --panel-alt: #202226;
+    --border: #2E3137;
+    --border-soft: #26282D;
+    --ink: #EDEEF0;
+    --ink-muted: #9AA1AC;
+    --ink-faint: #6B7280;
+    --copper: #CE8148;
+    --copper-hover: #E0925A;
+    --copper-soft: rgba(206,129,72,0.18);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  #root { height: 100vh; height: 100dvh; }
+  button { font-family: inherit; }
+  input, select { font-family: inherit; }
+  ::selection { background: var(--copper-soft); }
+  .mono { font-family: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace; }
+
+  .app-shell {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    height: 100%;
+    width: 100%;
+  }
+
+  /* ---------- Topbar ---------- */
+  .topbar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 0 14px;
+    height: 54px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    z-index: 40;
+  }
+  .brand { display: flex; align-items: center; gap: 9px; margin-right: 4px; flex-shrink: 0; }
+  .brand-mark { width: 26px; height: 26px; color: var(--copper); flex-shrink: 0; }
+  .brand-text { display: flex; flex-direction: column; line-height: 1.05; }
+  .brand-title { font-weight: 700; font-size: 15px; letter-spacing: 0.01em; }
+  .brand-sub { font-size: 10.5px; color: var(--ink-faint); font-family: 'IBM Plex Mono', monospace; letter-spacing: 0.02em; }
+
+  .topbar-divider { width: 1px; align-self: stretch; margin: 10px 0; background: var(--border); flex-shrink: 0; }
+
+  .tbtn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    height: 32px; padding: 0 10px; border-radius: var(--radius-sm);
+    border: 1px solid transparent; background: transparent; color: var(--ink-muted);
+    cursor: pointer; font-size: 12.5px; font-weight: 500; transition: background .12s, color .12s, border-color .12s;
+    white-space: nowrap;
+  }
+  .tbtn:hover:not(:disabled) { background: var(--panel-alt); color: var(--ink); }
+  .tbtn:disabled { opacity: 0.35; cursor: default; }
+  .tbtn.icon-only { width: 32px; padding: 0; }
+  .tbtn svg { width: 16px; height: 16px; }
+  .tbtn.primary { background: var(--copper); color: #fff; }
+  .tbtn.primary:hover:not(:disabled) { background: var(--copper-hover); }
+  .tbtn.danger:hover:not(:disabled) { background: var(--danger-soft); color: var(--danger); }
+
+  .zoom-group { display: flex; align-items: center; gap: 2px; }
+  .zoom-readout { width: 46px; text-align: center; font-size: 11.5px; color: var(--ink-muted); }
+
+  .title-input {
+    border: 1px solid transparent; background: transparent; color: var(--ink);
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 13px;
+    padding: 6px 8px; border-radius: var(--radius-sm); width: 180px; min-width: 0;
+  }
+  .title-input:hover { border-color: var(--border); }
+  .title-input:focus { outline: none; border-color: var(--copper); background: var(--panel-alt); }
+
+  .topbar-spacer { flex: 1; }
+
+  .export-group { display: flex; align-items: center; gap: 6px; }
+
+  .drawer-toggle { display: none; }
+
+  /* ---------- Layout ---------- */
+  .workspace {
+    display: grid;
+    grid-template-columns: 218px 1fr 260px;
+    min-height: 0;
+    position: relative;
+  }
+
+  .panel-col {
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    min-height: 0;
+  }
+  .panel-col.right { border-right: none; border-left: 1px solid var(--border); }
+
+  .panel-section { padding: 14px 12px; border-bottom: 1px solid var(--border-soft); }
+  .panel-section:last-child { border-bottom: none; }
+  .panel-heading {
+    font-size: 11px; font-weight: 600; color: var(--ink-faint);
+    margin: 0 0 9px 2px; letter-spacing: 0.01em;
+  }
+
+  .palette-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .palette-item {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    border: 1px solid var(--border-soft); background: var(--panel-alt);
+    border-radius: var(--radius-md); padding: 8px 4px 6px; cursor: grab;
+    transition: border-color .12s, background .12s, transform .08s;
+  }
+  .palette-item:hover { border-color: var(--copper); background: var(--copper-soft); }
+  .palette-item:active { cursor: grabbing; transform: scale(0.97); }
+  .palette-item svg { width: 40px; height: 26px; color: var(--ink-muted); }
+  .palette-item:hover svg { color: var(--copper); }
+  .palette-item-label { font-size: 9.5px; color: var(--ink-muted); text-align: center; line-height: 1.15; }
+
+  /* ---------- Canvas ---------- */
+  .canvas-col { position: relative; min-width: 0; overflow: hidden; background: var(--blueprint); }
+  .canvas-col svg.stage { display: block; width: 100%; height: 100%; touch-action: none; }
+  .canvas-hint {
+    position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%);
+    background: rgba(14,27,43,0.78); color: var(--symbol-ink); border: 1px solid rgba(215,227,240,0.18);
+    padding: 7px 13px; border-radius: 999px; font-size: 11px; pointer-events: none;
+    backdrop-filter: blur(4px); white-space: nowrap;
+  }
+  .coord-readout {
+    position: absolute; right: 12px; bottom: 12px; background: rgba(14,27,43,0.78);
+    color: var(--symbol-ink-dim); border: 1px solid rgba(215,227,240,0.14); border-radius: var(--radius-sm);
+    padding: 4px 8px; font-size: 10.5px; pointer-events: none;
+  }
+
+  /* ---------- Inspector ---------- */
+  .field { margin-bottom: 12px; }
+  .field:last-child { margin-bottom: 0; }
+  .field-label { font-size: 10.5px; color: var(--ink-faint); margin: 0 0 5px 1px; display: block; }
+  .field-input {
+    width: 100%; border: 1px solid var(--border); background: var(--panel-alt); color: var(--ink);
+    border-radius: var(--radius-sm); padding: 7px 8px; font-size: 12.5px;
+  }
+  .field-input:focus { outline: none; border-color: var(--copper); }
+  select.field-input { cursor: pointer; }
+
+  .row-btns { display: flex; gap: 6px; }
+  .row-btns .tbtn { flex: 1; border: 1px solid var(--border); }
+
+  .swatch-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .swatch {
+    width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--panel);
+    box-shadow: 0 0 0 1px var(--border); cursor: pointer; flex-shrink: 0;
+    transition: transform .1s;
+  }
+  .swatch:hover { transform: scale(1.12); }
+  .swatch.active { box-shadow: 0 0 0 2px var(--copper); }
+
+  .stat-row { display: flex; justify-content: space-between; align-items: baseline; padding: 5px 0; font-size: 12px; }
+  .stat-row .k { color: var(--ink-muted); }
+  .stat-row .v { font-family: 'IBM Plex Mono', monospace; font-weight: 500; }
+
+  .empty-note { font-size: 12px; color: var(--ink-muted); line-height: 1.5; }
+
+  .awg-table { width: 100%; border-collapse: collapse; font-size: 10.5px; }
+  .awg-table th { text-align: left; color: var(--ink-faint); font-weight: 500; padding: 3px 4px; border-bottom: 1px solid var(--border-soft); }
+  .awg-table td { padding: 3px 4px; font-family: 'IBM Plex Mono', monospace; color: var(--ink-muted); border-bottom: 1px solid var(--border-soft); }
+  .awg-table tbody tr:hover td { color: var(--ink); }
+
+  .selected-badge {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--copper);
+    background: var(--copper-soft); padding: 4px 9px; border-radius: 999px; margin-bottom: 12px; font-weight: 500;
+  }
+
+  .gauge-preview {
+    display: flex; align-items: center; gap: 8px; padding: 9px 10px; background: var(--panel-alt);
+    border: 1px solid var(--border-soft); border-radius: var(--radius-md); margin-bottom: 10px;
+  }
+  .gauge-preview .bar { border-radius: 3px; flex-shrink: 0; }
+  .gauge-preview .txt { font-size: 11px; color: var(--ink-muted); line-height: 1.4; }
+  .gauge-preview .txt b { color: var(--ink); font-family: 'IBM Plex Mono', monospace; font-weight: 600; }
+
+  /* scrollbars */
+  .panel-col::-webkit-scrollbar { width: 8px; }
+  .panel-col::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  .panel-col::-webkit-scrollbar-track { background: transparent; }
+
+  /* ---------- Mobile ---------- */
+  .scrim { display: none; }
+  @media (max-width: 860px) {
+    .workspace { grid-template-columns: 1fr; }
+    .panel-col {
+      position: fixed; top: 54px; bottom: 0; width: 250px; z-index: 60;
+      transform: translateX(-105%); transition: transform .2s ease;
+      box-shadow: 2px 0 18px rgba(0,0,0,0.18);
+    }
+    .panel-col.right { left: auto; right: 0; transform: translateX(105%); border-left: 1px solid var(--border); }
+    .panel-col.open { transform: translateX(0); }
+    .drawer-toggle { display: inline-flex; }
+    .brand-sub { display: none; }
+    .title-input { width: 110px; }
+    .scrim.open {
+      display: block; position: fixed; inset: 54px 0 0 0; background: rgba(10,12,15,0.35); z-index: 50;
+    }
+    .export-group .tbtn span.lbl { display: none; }
+  }
+  @media (max-width: 520px) {
+    .zoom-readout { display: none; }
+    .topbar { gap: 8px; padding: 0 8px; }
+    .title-input { width: 84px; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/6.26.0/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script type="text/babel" data-presets="react">
+const { useState, useRef, useEffect, useCallback, useMemo } = React;
+
+/* ============================== DATA ============================== */
+
+const AWG_TABLE = [
+  { awg: "0000", label: "4/0 AWG", mm: 11.68, amps: 230 },
+  { awg: "000",  label: "3/0 AWG", mm: 10.40, amps: 200 },
+  { awg: "00",   label: "2/0 AWG", mm: 9.27,  amps: 175 },
+  { awg: "0",    label: "1/0 AWG", mm: 8.25,  amps: 150 },
+  { awg: "1",    label: "1 AWG",   mm: 7.35,  amps: 130 },
+  { awg: "2",    label: "2 AWG",   mm: 6.54,  amps: 115 },
+  { awg: "3",    label: "3 AWG",   mm: 5.83,  amps: 100 },
+  { awg: "4",    label: "4 AWG",   mm: 5.19,  amps: 95  },
+  { awg: "6",    label: "6 AWG",   mm: 4.11,  amps: 75  },
+  { awg: "8",    label: "8 AWG",   mm: 3.26,  amps: 50  },
+  { awg: "10",   label: "10 AWG",  mm: 2.59,  amps: 30  },
+  { awg: "12",   label: "12 AWG",  mm: 2.05,  amps: 20  },
+  { awg: "14",   label: "14 AWG",  mm: 1.63,  amps: 15  },
+  { awg: "16",   label: "16 AWG",  mm: 1.29,  amps: 10  },
+  { awg: "18",   label: "18 AWG",  mm: 1.02,  amps: 7   },
+  { awg: "20",   label: "20 AWG",  mm: 0.81,  amps: 5   },
+  { awg: "22",   label: "22 AWG",  mm: 0.64,  amps: 3   },
+  { awg: "24",   label: "24 AWG",  mm: 0.51,  amps: 2   },
+];
+const awgInfo = (awg) => AWG_TABLE.find(a => a.awg === awg) || AWG_TABLE[12];
+const strokeForAwg = (awg) => {
+  const mm = awgInfo(awg).mm;
+  return Math.max(1.6, Math.min(11, 1.1 + mm * 0.95));
+};
+
+const WIRE_COLORS = ["#1A1D22", "#C0392B", "#2F5D8A", "#3F8F63", "#E8A93B", "#F4F1EA", "#6B4A2E", "#7A5CC9"];
+
+const GRID = 20;
+
+const SYMBOLS = {
+  battery:  { name: "DC Source",     category: "power",     w: 64, h: 40, terminals: [{ id: "a", x: -32, y: 0, tag: "+" }, { id: "b", x: 32, y: 0, tag: "\u2212" }] },
+  ac:       { name: "AC Source",     category: "power",     w: 64, h: 40, terminals: [{ id: "a", x: -32, y: 0 }, { id: "b", x: 32, y: 0 }] },
+  ground:   { name: "Ground",        category: "wiring",    w: 28, h: 30, terminals: [{ id: "a", x: 0, y: -18 }] },
+  switch:   { name: "Switch",        category: "switching", w: 64, h: 30, terminals: [{ id: "a", x: -32, y: 0 }, { id: "b", x: 32, y: 0 }] },
+  fuse:     { name: "Fuse",          category: "protection",w: 64, h: 22, terminals: [{ id: "a", x: -32, y: 0 }, { id: "b", x: 32, y: 0 }] },
+  breaker:  { name: "Breaker",       category: "protection",w: 64, h: 32, terminals: [{ id: "a", x: -32, y: 0 }, { id: "b", x: 32, y: 0 }] },
+  resistor: { name: "Resistor",      category: "passive",   w: 64, h: 20, terminals: [{ id: "a", x: -32, y: 0 }, { id: "b", x: 32, y: 0 }] },
+  capacitor:{ name: "Capacitor",     category: "passive",   w: 48, h: 26, terminals: [{ id: "a", x: -24, y: 0 }, { id: "b", x: 24, y: 0 }] },
+  led:      { name: "LED",           category: "passive",   w: 56, h: 28, terminals: [{ id: "a", x: -28, y: 0 }, { id: "b", x: 28, y: 0 }] },
+  lamp:     { name: "Lamp",          category: "loads",     w: 44, h: 44, terminals: [{ id: "a", x: -22, y: 0 }, { id: "b", x: 22, y: 0 }] },
+  motor:    { name: "Motor",         category: "loads",     w: 48, h: 48, terminals: [{ id: "a", x: -24, y: 0 }, { id: "b", x: 24, y: 0 }] },
+  outlet:   { name: "Outlet",        category: "loads",     w: 40, h: 40, terminals: [{ id: "a", x: -20, y: 0 }, { id: "b", x: 20, y: 0 }] },
+  junction: { name: "Junction",      category: "wiring",    w: 14, h: 14, terminals: [{ id: "a", x: 0, y: 0 }] },
+  terminal3:{ name: "Terminal Block",category: "wiring",    w: 64, h: 16, terminals: [{ id: "a", x: -24, y: 0 }, { id: "b", x: 0, y: 0 }, { id: "c", x: 24, y: 0 }] },
+};
+
+const CATEGORIES = [
+  { id: "power", label: "Power" },
+  { id: "protection", label: "Protection" },
+  { id: "switching", label: "Switching" },
+  { id: "loads", label: "Loads" },
+  { id: "passive", label: "Passive" },
+  { id: "wiring", label: "Wiring" },
+];
+
+/* ============================== SYMBOL ARTWORK ============================== */
+/* All symbols drawn in local coordinates centered at (0,0), rot=0 = horizontal. */
+
+function SymbolArt({ type }) {
+  switch (type) {
+    case "battery": return (
+      <g>
+        <line x1="-32" y1="0" x2="-9" y2="0" />
+        <line x1="9" y1="0" x2="32" y2="0" />
+        <line x1="-6" y1="-14" x2="-6" y2="14" strokeWidth="2" />
+        <line x1="6" y1="-7" x2="6" y2="7" strokeWidth="6" />
+        <text x="-13" y="-18" fontSize="11" textAnchor="middle" fill="currentColor" stroke="none" fontFamily="IBM Plex Mono, monospace">+</text>
+        <text x="13" y="-16" fontSize="13" textAnchor="middle" fill="currentColor" stroke="none" fontFamily="IBM Plex Mono, monospace">&#8722;</text>
+      </g>
+    );
+    case "ac": return (
+      <g>
+        <line x1="-32" y1="0" x2="-18" y2="0" />
+        <line x1="18" y1="0" x2="32" y2="0" />
+        <circle cx="0" cy="0" r="18" fill="none" />
+        <path d="M -10 0 C -7 -11, -3 -11, 0 0 C 3 11, 7 11, 10 0" fill="none" />
+      </g>
+    );
+    case "ground": return (
+      <g>
+        <line x1="0" y1="-18" x2="0" y2="0" />
+        <line x1="-12" y1="0" x2="12" y2="0" />
+        <line x1="-7" y1="6" x2="7" y2="6" />
+        <line x1="-3" y1="12" x2="3" y2="12" />
+      </g>
+    );
+    case "switch": return (
+      <g>
+        <line x1="-32" y1="0" x2="-14" y2="0" />
+        <line x1="14" y1="0" x2="32" y2="0" />
+        <circle cx="-14" cy="0" r="2.6" fill="currentColor" stroke="none" />
+        <circle cx="14" cy="0" r="2.6" fill="currentColor" stroke="none" />
+        <line x1="-14" y1="0" x2="11" y2="-13" />
+      </g>
+    );
+    case "fuse": return (
+      <g>
+        <line x1="-32" y1="0" x2="-15" y2="0" />
+        <line x1="15" y1="0" x2="32" y2="0" />
+        <rect x="-15" y="-9" width="30" height="18" rx="9" fill="none" />
+        <line x1="-11" y1="0" x2="11" y2="0" />
+      </g>
+    );
+    case "breaker": return (
+      <g>
+        <line x1="-32" y1="0" x2="-15" y2="0" />
+        <line x1="15" y1="0" x2="32" y2="0" />
+        <rect x="-15" y="-15" width="30" height="30" fill="none" />
+        <line x1="-7" y1="10" x2="7" y2="-10" />
+        <rect x="-3.5" y="-15" width="7" height="5" fill="currentColor" stroke="none" />
+      </g>
+    );
+    case "resistor": return (
+      <g>
+        <line x1="-32" y1="0" x2="-20" y2="0" />
+        <line x1="20" y1="0" x2="32" y2="0" />
+        <path d="M -20 0 L -14 -8 L -6 8 L 2 -8 L 10 8 L 16 -8 L 20 0" fill="none" />
+      </g>
+    );
+    case "capacitor": return (
+      <g>
+        <line x1="-24" y1="0" x2="-4" y2="0" />
+        <line x1="4" y1="0" x2="24" y2="0" />
+        <line x1="-4" y1="-12" x2="-4" y2="12" strokeWidth="2.4" />
+        <line x1="4" y1="-12" x2="4" y2="12" strokeWidth="2.4" />
+      </g>
+    );
+    case "led": return (
+      <g>
+        <line x1="-28" y1="0" x2="-8" y2="0" />
+        <line x1="8" y1="0" x2="28" y2="0" />
+        <path d="M -8 -10 L -8 10 L 8 0 Z" fill="currentColor" stroke="none" />
+        <line x1="8" y1="-10" x2="8" y2="10" strokeWidth="2.4" />
+        <line x1="10" y1="-13" x2="17" y2="-20" markerEnd="url(#arrowhead)" />
+        <line x1="15" y1="-9" x2="22" y2="-16" markerEnd="url(#arrowhead)" />
+      </g>
+    );
+    case "lamp": return (
+      <g>
+        <line x1="-22" y1="0" x2="-18" y2="0" />
+        <line x1="18" y1="0" x2="22" y2="0" />
+        <circle cx="0" cy="0" r="18" fill="none" />
+        <line x1="-12.5" y1="-12.5" x2="12.5" y2="12.5" />
+        <line x1="-12.5" y1="12.5" x2="12.5" y2="-12.5" />
+      </g>
+    );
+    case "motor": return (
+      <g>
+        <line x1="-24" y1="0" x2="-20" y2="0" />
+        <line x1="20" y1="0" x2="24" y2="0" />
+        <circle cx="0" cy="0" r="20" fill="none" />
+        <text x="0" y="0" fontSize="17" textAnchor="middle" dominantBaseline="central" fill="currentColor" stroke="none" fontFamily="IBM Plex Mono, monospace" fontWeight="600">M</text>
+      </g>
+    );
+    case "outlet": return (
+      <g>
+        <line x1="-20" y1="0" x2="-18" y2="0" />
+        <line x1="18" y1="0" x2="20" y2="0" />
+        <rect x="-18" y="-18" width="36" height="36" rx="6" fill="none" />
+        <line x1="-6" y1="-9" x2="-6" y2="3" strokeWidth="2.2" />
+        <line x1="6" y1="-9" x2="6" y2="3" strokeWidth="2.2" />
+        <circle cx="0" cy="10" r="2.6" fill="currentColor" stroke="none" />
+      </g>
+    );
+    case "junction": return (
+      <g><circle cx="0" cy="0" r="5" fill="currentColor" stroke="none" /></g>
+    );
+    case "terminal3": return (
+      <g>
+        <rect x="-32" y="-8" width="64" height="16" fill="none" />
+        <line x1="-24" y1="-8" x2="-24" y2="8" />
+        <line x1="0" y1="-8" x2="0" y2="8" />
+        <line x1="24" y1="-8" x2="24" y2="8" />
+      </g>
+    );
+    default: return null;
+  }
+}
+
+function SymbolIcon({ type, size = 40 }) {
+  return (
+    <svg viewBox="-34 -22 68 44" width={size} height={Math.round(size * 0.6)} style={{ color: "currentColor" }}>
+      <g stroke="currentColor" fill="none" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+        <SymbolArt type={type} />
+      </g>
+    </svg>
+  );
+}
+
+/* ============================== ICONS ============================== */
+
+const Ico = {
+  undo: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 14 4 9l5-5" /><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" /></svg>,
+  redo: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 14 5-5-5-5" /><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13" /></svg>,
+  zoomOut: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3M8 11h6" /></svg>,
+  zoomIn: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3M11 8v6M8 11h6" /></svg>,
+  fit: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3m11-5v3a2 2 0 0 1-2 2h-3" /></svg>,
+  trash: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6" /></svg>,
+  image: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-5-5L5 21" /></svg>,
+  file: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>,
+  menu: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6h16M4 12h16M4 18h16" /></svg>,
+  sliders: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 21V14M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 12h6" /></svg>,
+  close: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12" /></svg>,
+  rotate: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7" /><path d="M21 3v6h-6" /></svg>,
+};
+
+/* ============================== GEOMETRY HELPERS ============================== */
+
+function rotatePoint(x, y, rot) {
+  switch (((rot % 360) + 360) % 360) {
+    case 90: return { x: -y, y: x };
+    case 180: return { x: -x, y: -y };
+    case 270: return { x: y, y: -x };
+    default: return { x, y };
+  }
+}
+function terminalWorldPos(comp, termId) {
+  const def = SYMBOLS[comp.type];
+  const t = def.terminals.find(t => t.id === termId) || def.terminals[0];
+  const r = rotatePoint(t.x, t.y, comp.rot);
+  return { x: comp.x + r.x, y: comp.y + r.y };
+}
+function elbowPath(p1, p2) {
+  const dx = p2.x - p1.x, dy = p2.y - p1.y;
+  if (Math.abs(dx) < 0.5 || Math.abs(dy) < 0.5) return `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`;
+  const midX = p1.x + dx / 2;
+  return `M ${p1.x} ${p1.y} L ${midX} ${p1.y} L ${midX} ${p2.y} L ${p2.x} ${p2.y}`;
+}
+function bboxOf(components) {
+  if (!components.length) return { minX: -200, minY: -140, maxX: 200, maxY: 140 };
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  components.forEach(c => {
+    const def = SYMBOLS[c.type];
+    const rotW = (c.rot === 90 || c.rot === 270) ? def.h : def.w;
+    const rotH = (c.rot === 90 || c.rot === 270) ? def.w : def.h;
+    minX = Math.min(minX, c.x - rotW / 2 - 10);
+    maxX = Math.max(maxX, c.x + rotW / 2 + 10);
+    minY = Math.min(minY, c.y - rotH / 2 - 26);
+    maxY = Math.max(maxY, c.y + rotH / 2 + 10);
+  });
+  return { minX, minY, maxX, maxY };
+}
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+let __id = 100;
+const uid = (prefix) => `${prefix}${(__id++).toString(36)}`;
+
+/* ============================== SEED DATA ============================== */
+
+function seedState() {
+  const components = [
+    { id: "c1", type: "battery", x: -260, y: 0, rot: 0, label: "12V Source" },
+    { id: "c2", type: "fuse", x: -100, y: 0, rot: 0, label: "10A Fuse" },
+    { id: "c3", type: "switch", x: 60, y: 0, rot: 0, label: "SW1" },
+    { id: "c4", type: "lamp", x: 220, y: 0, rot: 0, label: "Lamp 1" },
+    { id: "c5", type: "junction", x: 220, y: 120, rot: 0, label: "" },
+    { id: "c6", type: "ground", x: 220, y: 200, rot: 0, label: "GND" },
+  ];
+  const wires = [
+    { id: "w1", from: { compId: "c1", termId: "b" }, to: { compId: "c2", termId: "a" }, awg: "12", color: "#C0392B" },
+    { id: "w2", from: { compId: "c2", termId: "b" }, to: { compId: "c3", termId: "a" }, awg: "12", color: "#C0392B" },
+    { id: "w3", from: { compId: "c3", termId: "b" }, to: { compId: "c4", termId: "a" }, awg: "14", color: "#C0392B" },
+    { id: "w4", from: { compId: "c4", termId: "b" }, to: { compId: "c5", termId: "a" }, awg: "14", color: "#1A1D22" },
+    { id: "w5", from: { compId: "c5", termId: "a" }, to: { compId: "c1", termId: "a" }, awg: "10", color: "#1A1D22" },
+    { id: "w6", from: { compId: "c5", termId: "a" }, to: { compId: "c6", termId: "a" }, awg: "14", color: "#3F8F63" },
+  ];
+  return { components, wires };
+}
+
+/* ============================== MAIN APP ============================== */
+
+function App() {
+  const seed = useMemo(seedState, []);
+  const [components, setComponents] = useState(seed.components);
+  const [wires, setWires] = useState(seed.wires);
+  const [selected, setSelected] = useState(null); // { kind: 'component'|'wire', id }
+  const [projectTitle, setProjectTitle] = useState("Untitled Circuit");
+  const [defaultAwg, setDefaultAwg] = useState("14");
+  const [defaultColor, setDefaultColor] = useState("#1A1D22");
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 460, y: 300 });
+  const [leftOpen, setLeftOpen] = useState(false);
+  const [rightOpen, setRightOpen] = useState(false);
+  const [saving, setSaving] = useState(null); // 'png' | 'pdf' | null
+  const [toast, setToast] = useState(null);
+
+  const past = useRef([]);
+  const future = useRef([]);
+
+  const snapshot = useCallback(() => ({ components, wires }), [components, wires]);
+
+  const commit = useCallback((next) => {
+    past.current.push(snapshot());
+    if (past.current.length > 60) past.current.shift();
+    future.current = [];
+    if (next.components) setComponents(next.components);
+    if (next.wires) setWires(next.wires);
+  }, [snapshot]);
+
+  const undo = useCallback(() => {
+    if (!past.current.length) return;
+    const cur = snapshot();
+    const prev = past.current.pop();
+    future.current.push(cur);
+    setComponents(prev.components);
+    setWires(prev.wires);
+    setSelected(null);
+  }, [snapshot]);
+
+  const redo = useCallback(() => {
+    if (!future.current.length) return;
+    const cur = snapshot();
+    const next = future.current.pop();
+    past.current.push(cur);
+    setComponents(next.components);
+    setWires(next.wires);
+    setSelected(null);
+  }, [snapshot]);
+
+  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 2600); };
+
+  /* ---------- mutation helpers ---------- */
+
+  const addComponent = useCallback((type, worldX, worldY) => {
+    const gx = Math.round(worldX / GRID) * GRID;
+    const gy = Math.round(worldY / GRID) * GRID;
+    const comp = { id: uid("c"), type, x: gx, y: gy, rot: 0, label: SYMBOLS[type].name };
+    past.current.push(snapshot()); future.current = [];
+    setComponents(cs => [...cs, comp]);
+    setSelected({ kind: "component", id: comp.id });
+  }, [snapshot]);
+
+  const moveComponent = useCallback((id, x, y) => {
+    setComponents(cs => cs.map(c => c.id === id ? { ...c, x, y } : c));
+  }, []);
+
+  const finalizeMove = useCallback((id) => {
+    setComponents(cs => {
+      past.current.push({ components: cs.map(c => c.id === id ? { ...c, x: Math.round(c.x / GRID) * GRID, y: Math.round(c.y / GRID) * GRID } : c), wires });
+      return cs;
+    });
+    setComponents(cs => cs.map(c => c.id === id ? { ...c, x: Math.round(c.x / GRID) * GRID, y: Math.round(c.y / GRID) * GRID } : c));
+  }, [wires]);
+
+  const rotateSelected = useCallback(() => {
+    if (!selected || selected.kind !== "component") return;
+    past.current.push(snapshot()); future.current = [];
+    setComponents(cs => cs.map(c => c.id === selected.id ? { ...c, rot: (c.rot + 90) % 360 } : c));
+  }, [selected, snapshot]);
+
+  const renameSelected = useCallback((label) => {
+    if (!selected || selected.kind !== "component") return;
+    setComponents(cs => cs.map(c => c.id === selected.id ? { ...c, label } : c));
+  }, [selected]);
+
+  const deleteSelected = useCallback(() => {
+    if (!selected) return;
+    past.current.push(snapshot()); future.current = [];
+    if (selected.kind === "component") {
+      setComponents(cs => cs.filter(c => c.id !== selected.id));
+      setWires(ws => ws.filter(w => w.from.compId !== selected.id && w.to.compId !== selected.id));
+    } else {
+      setWires(ws => ws.filter(w => w.id !== selected.id));
+    }
+    setSelected(null);
+  }, [selected, snapshot]);
+
+  const addWire = useCallback((fromCompId, fromTermId, toCompId, toTermId) => {
+    if (fromCompId === toCompId && fromTermId === toTermId) return;
+    const wire = { id: uid("w"), from: { compId: fromCompId, termId: fromTermId }, to: { compId: toCompId, termId: toTermId }, awg: defaultAwg, color: defaultColor };
+    past.current.push(snapshot()); future.current = [];
+    setWires(ws => [...ws, wire]);
+    setSelected({ kind: "wire", id: wire.id });
+  }, [defaultAwg, defaultColor, snapshot]);
+
+  const updateWire = useCallback((id, patch) => {
+    past.current.push(snapshot()); future.current = [];
+    setWires(ws => ws.map(w => w.id === id ? { ...w, ...patch } : w));
+  }, [snapshot]);
+
+  const clearBoard = useCallback(() => {
+    if (!components.length && !wires.length) return;
+    if (!window.confirm("Clear the entire board? This can be undone with Ctrl+Z.")) return;
+    past.current.push(snapshot()); future.current = [];
+    setComponents([]); setWires([]); setSelected(null);
+  }, [components, wires, snapshot]);
+
+  /* ---------- keyboard shortcuts ---------- */
+
+  useEffect(() => {
+    const onKey = (e) => {
+      const tag = document.activeElement && document.activeElement.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        if (e.shiftKey) redo(); else undo();
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y") {
+        e.preventDefault(); redo();
+      } else if (e.key === "Delete" || e.key === "Backspace") {
+        if (selected) { e.preventDefault(); deleteSelected(); }
+      } else if (e.key.toLowerCase() === "r") {
+        rotateSelected();
+      } else if (e.key === "Escape") {
+        setSelected(null);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [undo, redo, selected, deleteSelected, rotateSelected]);
+
+  /* ---------- export ---------- */
+
+  async function saveFile(filename, blob) {
+    try {
+      const downloads = await (window.claude && window.claude.use ? window.claude.use("downloads") : Promise.resolve(null));
+      if (downloads) {
+        await downloads.save({ filename, data: blob });
+        showToast(`Saved ${filename}`);
+        return;
+      }
+    } catch (err) {
+      if (err && err.code === "declined") return;
+    }
+    try {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+      showToast(`Saved ${filename}`);
+    } catch (err) {
+      showToast("Could not save the file.");
+    }
+  }
+
+  function dataUrlToBlob(dataUrl) {
+    const [head, b64] = dataUrl.split(",");
+    const mime = head.match(/:(.*?);/)[1];
+    const bin = atob(b64);
+    const arr = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    return new Blob([arr], { type: mime });
+  }
+
+  function buildExportSVG() {
+    const box = bboxOf(components);
+    const padded = { minX: box.minX - 60, minY: box.minY - 60, maxX: box.maxX + 60, maxY: box.maxY + 60 };
+    const contentW = padded.maxX - padded.minX;
+    const contentH = padded.maxY - padded.minY;
+    const titleBlockH = 78;
+    const W = Math.max(600, contentW);
+    const H = Math.max(400, contentH) + titleBlockH;
+    const ox = -padded.minX;
+    const oy = -padded.minY;
+
+    const ink = "#20242B";
+    let grid = "";
+    for (let gx = 0; gx <= W; gx += GRID) {
+      grid += `<line x1="${gx}" y1="0" x2="${gx}" y2="${H - titleBlockH}" stroke="#E3E7EC" stroke-width="${gx % (GRID * 5) === 0 ? 1 : 0.5}" />`;
+    }
+    for (let gy = 0; gy <= H - titleBlockH; gy += GRID) {
+      grid += `<line x1="0" y1="${gy}" x2="${W}" y2="${gy}" stroke="#E3E7EC" stroke-width="${gy % (GRID * 5) === 0 ? 1 : 0.5}" />`;
+    }
+
+    let wireSvg = "";
+    const usedGauges = new Map();
+    wires.forEach(w => {
+      const fc = components.find(c => c.id === w.from.compId);
+      const tc = components.find(c => c.id === w.to.compId);
+      if (!fc || !tc) return;
+      const p1 = terminalWorldPos(fc, w.from.termId);
+      const p2 = terminalWorldPos(tc, w.to.termId);
+      const d = elbowPath({ x: p1.x + ox, y: p1.y + oy }, { x: p2.x + ox, y: p2.y + oy });
+      const sw = strokeForAwg(w.awg);
+      wireSvg += `<path d="${d}" fill="none" stroke="${w.color}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" />`;
+      const info = awgInfo(w.awg);
+      usedGauges.set(w.awg, { ...info, color: w.color });
+    });
+
+    let compSvg = "";
+    components.forEach(c => {
+      const def = SYMBOLS[c.type];
+      const cx = c.x + ox, cy = c.y + oy;
+      const bodyId = "body_" + c.id;
+      const artMarkup = ReactDOMServer.renderToStaticMarkup(
+        <g stroke={ink} fill="none" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><SymbolArt type={c.type} /></g>
+      );
+      compSvg += `<g transform="translate(${cx},${cy}) rotate(${c.rot})" style="color:${ink}">${artMarkup}</g>`;
+      def.terminals.forEach(t => {
+        const r = rotatePoint(t.x, t.y, c.rot);
+        compSvg += `<circle cx="${cx + r.x}" cy="${cy + r.y}" r="2.6" fill="${ink}" />`;
+      });
+      if (c.label) {
+        const labelY = cy + (def.h / 2) + 16;
+        compSvg += `<text x="${cx}" y="${labelY}" font-size="10.5" text-anchor="middle" font-family="IBM Plex Mono, monospace" fill="#4A5261">${escapeXml(c.label)}</text>`;
+      }
+    });
+
+    const dateStr = new Date().toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+    const tbY = H - titleBlockH;
+    const legendEntries = Array.from(usedGauges.values()).slice(0, 5);
+    let legendSvg = "";
+    legendEntries.forEach((g, i) => {
+      const lx = 190 + i * 105;
+      legendSvg += `<line x1="${lx}" y1="${tbY + 40}" x2="${lx + 26}" y2="${tbY + 40}" stroke="${g.color}" stroke-width="${strokeForAwg(g.awg)}" stroke-linecap="round" />`;
+      legendSvg += `<text x="${lx + 32}" y="${tbY + 43}" font-size="9" font-family="IBM Plex Mono, monospace" fill="#4A5261">${g.label}</text>`;
+    });
+
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+      <defs>
+        <marker id="arrowhead" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="${ink}"/></marker>
+      </defs>
+      <rect x="0" y="0" width="${W}" height="${H}" fill="#FFFFFF" />
+      <g>${grid}</g>
+      <rect x="3" y="3" width="${W - 6}" height="${H - 6}" fill="none" stroke="#B8BEC7" stroke-width="1.5" />
+      ${wireSvg}
+      ${compSvg}
+      <line x1="0" y1="${tbY}" x2="${W}" y2="${tbY}" stroke="#B8BEC7" stroke-width="1.5" />
+      <line x1="175" y1="${tbY}" x2="175" y2="${H}" stroke="#D8DCE2" stroke-width="1" />
+      <text x="18" y="${tbY + 26}" font-size="16" font-family="Georgia, serif" font-weight="700" fill="#191B1F">${escapeXml(projectTitle || "Untitled Circuit")}</text>
+      <text x="18" y="${tbY + 46}" font-size="10" font-family="IBM Plex Mono, monospace" fill="#6B7280">Wiring diagram \u00b7 sizes in AWG / mm</text>
+      <text x="18" y="${tbY + 62}" font-size="9.5" font-family="IBM Plex Mono, monospace" fill="#8A92A0">${dateStr} \u00b7 Circuit Draft</text>
+      <text x="190" y="${tbY + 22}" font-size="9" font-family="IBM Plex Mono, monospace" fill="#8A92A0">GAUGE LEGEND</text>
+      ${legendSvg}
+    </svg>`;
+    return { svg, W, H };
+  }
+
+  function escapeXml(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
+  function rasterize(svgStr, W, H, scale) {
+    return new Promise((resolve, reject) => {
+      const blob = new Blob([svgStr], { type: "image/svg+xml;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(W * scale);
+        canvas.height = Math.round(H * scale);
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        URL.revokeObjectURL(url);
+        resolve(canvas.toDataURL("image/png"));
+      };
+      img.onerror = (e) => { URL.revokeObjectURL(url); reject(e); };
+      img.src = url;
+    });
+  }
+
+  const slug = () => (projectTitle || "circuit").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "circuit";
+
+  async function exportPng() {
+    setSaving("png");
+    try {
+      const { svg, W, H } = buildExportSVG();
+      const dataUrl = await rasterize(svg, W, H, 2.2);
+      await saveFile(`${slug()}.png`, dataUrlToBlob(dataUrl));
+    } catch (e) {
+      showToast("PNG export failed.");
+    } finally { setSaving(null); }
+  }
+
+  async function exportPdf() {
+    setSaving("pdf");
+    try {
+      const { svg, W, H } = buildExportSVG();
+      const dataUrl = await rasterize(svg, W, H, 2.2);
+      const { jsPDF } = window.jspdf;
+      const orientation = W >= H ? "landscape" : "portrait";
+      const doc = new jsPDF({ orientation, unit: "pt", format: [W, H] });
+      doc.addImage(dataUrl, "PNG", 0, 0, W, H);
+      const blob = doc.output("blob");
+      await saveFile(`${slug()}.pdf`, blob);
+    } catch (e) {
+      showToast("PDF export failed.");
+    } finally { setSaving(null); }
+  }
+
+  /* ---------- render ---------- */
+
+  const selectedComponent = selected && selected.kind === "component" ? components.find(c => c.id === selected.id) : null;
+  const selectedWire = selected && selected.kind === "wire" ? wires.find(w => w.id === selected.id) : null;
+
+  return (
+    <div className="app-shell">
+      <Topbar
+        projectTitle={projectTitle} setProjectTitle={setProjectTitle}
+        zoom={zoom} setZoom={setZoom}
+        onUndo={undo} onRedo={redo} canUndo={!!past.current.length} canRedo={!!future.current.length}
+        onClear={clearBoard}
+        onExportPng={exportPng} onExportPdf={exportPdf} saving={saving}
+        onToggleLeft={() => setLeftOpen(v => !v)} onToggleRight={() => setRightOpen(v => !v)}
+      />
+      <div className="workspace">
+        <div className={"panel-col " + (leftOpen ? "open" : "")}>
+          <Palette onAdd={(type) => addComponent(type, (0 - pan.x) / zoom, (0 - pan.y) / zoom)} onClose={() => setLeftOpen(false)} />
+        </div>
+        {(leftOpen || rightOpen) && <div className={"scrim open"} onClick={() => { setLeftOpen(false); setRightOpen(false); }} />}
+        <CanvasStage
+          components={components} wires={wires}
+          selected={selected} setSelected={setSelected}
+          zoom={zoom} setZoom={setZoom} pan={pan} setPan={setPan}
+          onDropComponent={addComponent}
+          onMoveComponent={moveComponent}
+          onFinalizeMove={finalizeMove}
+          onAddWire={addWire}
+        />
+        <div className={"panel-col right " + (rightOpen ? "open" : "")}>
+          <Inspector
+            selectedComponent={selectedComponent}
+            selectedWire={selectedWire}
+            onRename={renameSelected}
+            onRotate={rotateSelected}
+            onDelete={deleteSelected}
+            onUpdateWire={updateWire}
+            defaultAwg={defaultAwg} setDefaultAwg={setDefaultAwg}
+            defaultColor={defaultColor} setDefaultColor={setDefaultColor}
+            componentCount={components.length}
+            wireCount={wires.length}
+            onClose={() => setRightOpen(false)}
+          />
+        </div>
+      </div>
+      {toast && <div style={{ position: "fixed", left: "50%", bottom: 22, transform: "translateX(-50%)", background: "var(--ink)", color: "var(--panel)", padding: "9px 16px", borderRadius: 8, fontSize: 12.5, zIndex: 200, boxShadow: "0 6px 20px rgba(0,0,0,0.25)" }}>{toast}</div>}
+    </div>
+  );
+}
+
+/* ============================== TOPBAR ============================== */
+
+function Topbar({ projectTitle, setProjectTitle, zoom, setZoom, onUndo, onRedo, canUndo, canRedo, onClear, onExportPng, onExportPdf, saving, onToggleLeft, onToggleRight }) {
+  return (
+    <div className="topbar">
+      <button className="tbtn icon-only drawer-toggle" onClick={onToggleLeft} title="Components"><Ico.menu /></button>
+      <div className="brand">
+        <svg className="brand-mark" viewBox="0 0 32 32" fill="none">
+          <circle cx="8" cy="16" r="3.2" fill="currentColor" />
+          <circle cx="24" cy="8" r="3.2" fill="currentColor" />
+          <circle cx="24" cy="24" r="3.2" fill="currentColor" />
+          <path d="M11 16h6M17 16l4-6.5M17 16l4 6.5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+        </svg>
+        <div className="brand-text">
+          <span className="brand-title">Circuit Draft</span>
+          <span className="brand-sub">WIRING DIAGRAM DESIGNER</span>
+        </div>
+      </div>
+      <input className="title-input" value={projectTitle} onChange={e => setProjectTitle(e.target.value)} spellCheck={false} />
+      <div className="topbar-divider" />
+      <button className="tbtn icon-only" onClick={onUndo} disabled={!canUndo} title="Undo (Ctrl+Z)"><Ico.undo /></button>
+      <button className="tbtn icon-only" onClick={onRedo} disabled={!canRedo} title="Redo (Ctrl+Shift+Z)"><Ico.redo /></button>
+      <div className="topbar-divider" />
+      <div className="zoom-group">
+        <button className="tbtn icon-only" onClick={() => setZoom(z => clamp(+(z - 0.15).toFixed(2), 0.35, 2.5))} title="Zoom out"><Ico.zoomOut /></button>
+        <span className="zoom-readout mono">{Math.round(zoom * 100)}%</span>
+        <button className="tbtn icon-only" onClick={() => setZoom(z => clamp(+(z + 0.15).toFixed(2), 0.35, 2.5))} title="Zoom in"><Ico.zoomIn /></button>
+      </div>
+      <div className="topbar-spacer" />
+      <button className="tbtn" onClick={onClear} title="Clear board"><Ico.trash /><span className="lbl">Clear</span></button>
+      <div className="topbar-divider" />
+      <div className="export-group">
+        <button className="tbtn primary" onClick={onExportPng} disabled={!!saving}><Ico.image /><span className="lbl">{saving === "png" ? "Saving\u2026" : "PNG"}</span></button>
+        <button className="tbtn" style={{ border: "1px solid var(--border)" }} onClick={onExportPdf} disabled={!!saving}><Ico.file /><span className="lbl">{saving === "pdf" ? "Saving\u2026" : "PDF"}</span></button>
+      </div>
+      <button className="tbtn icon-only drawer-toggle" onClick={onToggleRight} title="Inspector"><Ico.sliders /></button>
+    </div>
+  );
+}
+
+/* ============================== PALETTE ============================== */
+
+function Palette({ onAdd, onClose }) {
+  return (
+    <React.Fragment>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 12px 0" }}>
+        <span className="panel-heading" style={{ margin: 0 }}>Components</span>
+        <button className="tbtn icon-only drawer-toggle" onClick={onClose}><Ico.close /></button>
+      </div>
+      {CATEGORIES.map(cat => {
+        const items = Object.entries(SYMBOLS).filter(([, def]) => def.category === cat.id);
+        if (!items.length) return null;
+        return (
+          <div className="panel-section" key={cat.id}>
+            <p className="panel-heading">{cat.label}</p>
+            <div className="palette-grid">
+              {items.map(([type, def]) => (
+                <div
+                  key={type}
+                  className="palette-item"
+                  draggable
+                  onDragStart={(e) => e.dataTransfer.setData("text/plain", type)}
+                  onClick={() => onAdd(type)}
+                  title={`Add ${def.name}`}
+                >
+                  <SymbolIcon type={type} />
+                  <span className="palette-item-label">{def.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+      <div className="panel-section">
+        <p className="empty-note">Drag a part onto the board, or tap to drop it at center. Click a terminal dot and drag to another to wire them.</p>
+      </div>
+    </React.Fragment>
+  );
+}
+
+/* ============================== CANVAS ============================== */
+
+function CanvasStage({ components, wires, selected, setSelected, zoom, setZoom, pan, setPan, onDropComponent, onMoveComponent, onFinalizeMove, onAddWire }) {
+  const svgRef = useRef(null);
+  const [wireDraft, setWireDraft] = useState(null); // {fromCompId, fromTermId, x1,y1, x2,y2}
+  const [dragging, setDragging] = useState(null); // {id, dx, dy}
+  const [panning, setPanning] = useState(null); // {startX, startY, panX, panY, moved}
+  const [hoverTerm, setHoverTerm] = useState(null);
+  const [coord, setCoord] = useState({ x: 0, y: 0 });
+
+  const screenToWorld = useCallback((clientX, clientY) => {
+    const rect = svgRef.current.getBoundingClientRect();
+    const sx = clientX - rect.left, sy = clientY - rect.top;
+    return { x: (sx - pan.x) / zoom, y: (sy - pan.y) / zoom, sx, sy };
+  }, [pan, zoom]);
+
+  const onWheel = useCallback((e) => {
+    e.preventDefault();
+    const rect = svgRef.current.getBoundingClientRect();
+    const sx = e.clientX - rect.left, sy = e.clientY - rect.top;
+    const worldX = (sx - pan.x) / zoom, worldY = (sy - pan.y) / zoom;
+    const factor = e.deltaY > 0 ? 0.9 : 1.1;
+    const newZoom = clamp(+(zoom * factor).toFixed(3), 0.35, 2.5);
+    setPan({ x: sx - worldX * newZoom, y: sy - worldY * newZoom });
+    setZoom(newZoom);
+  }, [pan, zoom, setZoom, setPan]);
+
+  const onDrop = (e) => {
+    e.preventDefault();
+    const type = e.dataTransfer.getData("text/plain");
+    if (!type || !SYMBOLS[type]) return;
+    const { x, y } = screenToWorld(e.clientX, e.clientY);
+    onDropComponent(type, x, y);
+  };
+
+  const onBgMouseDown = (e) => {
+    if (e.button !== 0) return;
+    setPanning({ startX: e.clientX, startY: e.clientY, panX: pan.x, panY: pan.y, moved: false });
+  };
+
+  const onCompMouseDown = (e, comp) => {
+    e.stopPropagation();
+    const { x, y } = screenToWorld(e.clientX, e.clientY);
+    setDragging({ id: comp.id, offX: x - comp.x, offY: y - comp.y, moved: false });
+    setSelected({ kind: "component", id: comp.id });
+  };
+
+  const onTermMouseDown = (e, comp, termId) => {
+    e.stopPropagation();
+    const p = terminalWorldPos(comp, termId);
+    const world = screenToWorld(e.clientX, e.clientY);
+    setWireDraft({ fromCompId: comp.id, fromTermId: termId, x1: p.x, y1: p.y, x2: world.x, y2: world.y });
+  };
+
+  const onTermMouseUp = (e, comp, termId) => {
+    e.stopPropagation();
+    if (wireDraft) {
+      onAddWire(wireDraft.fromCompId, wireDraft.fromTermId, comp.id, termId);
+      setWireDraft(null);
+    }
+  };
+
+  const onMouseMove = (e) => {
+    const world = screenToWorld(e.clientX, e.clientY);
+    setCoord({ x: Math.round(world.x), y: Math.round(world.y) });
+    if (wireDraft) {
+      setWireDraft(d => d ? { ...d, x2: world.x, y2: world.y } : d);
+    } else if (dragging) {
+      const nx = world.x - dragging.offX, ny = world.y - dragging.offY;
+      onMoveComponent(dragging.id, nx, ny);
+      setDragging(d => d ? { ...d, moved: true } : d);
+    } else if (panning) {
+      const dx = e.clientX - panning.startX, dy = e.clientY - panning.startY;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+        setPan({ x: panning.panX + dx, y: panning.panY + dy });
+        setPanning(p => p ? { ...p, moved: true } : p);
+      }
+    }
+  };
+
+  const onMouseUp = (e) => {
+    if (dragging) {
+      if (dragging.moved) onFinalizeMove(dragging.id);
+      setDragging(null);
+    }
+    if (panning) {
+      if (!panning.moved) setSelected(null);
+      setPanning(null);
+    }
+    if (wireDraft) setWireDraft(null);
+  };
+
+  return (
+    <div className="canvas-col">
+      <svg
+        ref={svgRef}
+        className="stage"
+        onWheel={onWheel}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={onDrop}
+        onMouseDown={onBgMouseDown}
+        onMouseMove={onMouseMove}
+        onMouseUp={onMouseUp}
+        onMouseLeave={onMouseUp}
+        style={{ cursor: panning && panning.moved ? "grabbing" : "default" }}
+      >
+        <defs>
+          <pattern id="gridMinor" width={GRID} height={GRID} patternUnits="userSpaceOnUse">
+            <path d={`M ${GRID} 0 L 0 0 0 ${GRID}`} fill="none" stroke="#1A2C42" strokeWidth="1" />
+          </pattern>
+          <pattern id="gridMajor" width={GRID * 5} height={GRID * 5} patternUnits="userSpaceOnUse">
+            <rect width={GRID * 5} height={GRID * 5} fill="url(#gridMinor)" />
+            <path d={`M ${GRID * 5} 0 L 0 0 0 ${GRID * 5}`} fill="none" stroke="#24405F" strokeWidth="1.2" />
+          </pattern>
+          <marker id="arrowhead" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+            <path d="M0,0 L6,3 L0,6 Z" fill="#D7E3F0" />
+          </marker>
+        </defs>
+        <rect x="-4000" y="-4000" width="8000" height="8000" fill="var(--blueprint)" />
+        <g transform={`translate(${pan.x},${pan.y}) scale(${zoom})`}>
+          <rect x="-4000" y="-4000" width="8000" height="8000" fill="url(#gridMajor)" />
+
+          {/* wires */}
+          {wires.map(w => {
+            const fc = components.find(c => c.id === w.from.compId);
+            const tc = components.find(c => c.id === w.to.compId);
+            if (!fc || !tc) return null;
+            const p1 = terminalWorldPos(fc, w.from.termId);
+            const p2 = terminalWorldPos(tc, w.to.termId);
+            const d = elbowPath(p1, p2);
+            const isSel = selected && selected.kind === "wire" && selected.id === w.id;
+            const sw = strokeForAwg(w.awg);
+            return (
+              <g key={w.id}>
+                {isSel && <path d={d} fill="none" stroke="#B5642A" strokeOpacity="0.35" strokeWidth={sw + 9} strokeLinecap="round" strokeLinejoin="round" />}
+                <path d={d} fill="none" stroke="transparent" strokeWidth={Math.max(16, sw + 12)} strokeLinecap="round" strokeLinejoin="round"
+                  onMouseDown={(e) => { e.stopPropagation(); setSelected({ kind: "wire", id: w.id }); }} style={{ cursor: "pointer" }} />
+                <path d={d} fill="none" stroke={w.color} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" pointerEvents="none" />
+              </g>
+            );
+          })}
+
+          {/* wire draft */}
+          {wireDraft && (
+            <path d={elbowPath({ x: wireDraft.x1, y: wireDraft.y1 }, { x: wireDraft.x2, y: wireDraft.y2 })}
+              fill="none" stroke="#E8A93B" strokeWidth="2.4" strokeDasharray="6 4" strokeLinecap="round" pointerEvents="none" />
+          )}
+
+          {/* components */}
+          {components.map(c => {
+            const def = SYMBOLS[c.type];
+            const isSel = selected && selected.kind === "component" && selected.id === c.id;
+            return (
+              <g key={c.id}>
+                <g
+                  transform={`translate(${c.x},${c.y}) rotate(${c.rot})`}
+                  onMouseDown={(e) => onCompMouseDown(e, c)}
+                  style={{ cursor: "grab", color: isSel ? "#B5642A" : "#D7E3F0" }}
+                >
+                  {isSel && <rect x={-def.w / 2 - 8} y={-def.h / 2 - 8} width={def.w + 16} height={def.h + 16} rx="8" fill="#B5642A" opacity="0.14" />}
+                  <g stroke="currentColor" fill="none" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+                    <SymbolArt type={c.type} />
+                  </g>
+                </g>
+                {c.label && (
+                  <text x={c.x} y={c.y + def.h / 2 + 15} textAnchor="middle" fontSize="10.5" fontFamily="IBM Plex Mono, monospace"
+                    fill={isSel ? "#E8A93B" : "#7E93AC"} pointerEvents="none">{c.label}</text>
+                )}
+                {def.terminals.map(t => {
+                  const r = rotatePoint(t.x, t.y, c.rot);
+                  const wx = c.x + r.x, wy = c.y + r.y;
+                  const key = c.id + t.id;
+                  const isHover = hoverTerm === key;
+                  return (
+                    <circle
+                      key={t.id}
+                      cx={wx} cy={wy} r={isHover ? 6.5 : 5}
+                      fill={isHover ? "#E8A93B" : "var(--blueprint)"}
+                      stroke={isHover ? "#E8A93B" : "#D7E3F0"}
+                      strokeWidth="2"
+                      style={{ cursor: "crosshair" }}
+                      onMouseEnter={() => setHoverTerm(key)}
+                      onMouseLeave={() => setHoverTerm(null)}
+                      onMouseDown={(e) => onTermMouseDown(e, c, t.id)}
+                      onMouseUp={(e) => onTermMouseUp(e, c, t.id)}
+                    />
+                  );
+                })}
+              </g>
+            );
+          })}
+        </g>
+      </svg>
+      <div className="canvas-hint">Drag parts from the left \u00b7 drag between terminal dots to wire \u00b7 scroll to zoom</div>
+      <div className="coord-readout mono">x {coord.x}, y {coord.y}</div>
+    </div>
+  );
+}
+
+/* ============================== INSPECTOR ============================== */
+
+function Inspector(props) {
+  const {
+    selectedComponent, selectedWire, onRename, onRotate, onDelete, onUpdateWire,
+    defaultAwg, setDefaultAwg, defaultColor, setDefaultColor, componentCount, wireCount, onClose,
+  } = props;
+
+  return (
+    <React.Fragment>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 12px 0" }}>
+        <span className="panel-heading" style={{ margin: 0 }}>Inspector</span>
+        <button className="tbtn icon-only drawer-toggle" onClick={onClose}><Ico.close /></button>
+      </div>
+
+      {selectedComponent && (
+        <div className="panel-section">
+          <span className="selected-badge"><SymbolIcon type={selectedComponent.type} size={16} /> {SYMBOLS[selectedComponent.type].name}</span>
+          <div className="field">
+            <label className="field-label">Label</label>
+            <input className="field-input" value={selectedComponent.label} onChange={e => onRename(e.target.value)} spellCheck={false} />
+          </div>
+          <div className="field">
+            <label className="field-label">Position</label>
+            <div className="mono" style={{ fontSize: 12, color: "var(--ink-muted)" }}>x {selectedComponent.x}, y {selectedComponent.y} \u00b7 {selectedComponent.rot}\u00b0</div>
+          </div>
+          <div className="row-btns">
+            <button className="tbtn" onClick={onRotate}><Ico.rotate /> Rotate</button>
+            <button className="tbtn danger" onClick={onDelete}><Ico.trash /> Delete</button>
+          </div>
+        </div>
+      )}
+
+      {selectedWire && (
+        <div className="panel-section">
+          <span className="selected-badge">Wire selected</span>
+          <div className="gauge-preview">
+            <div className="bar" style={{ width: 34, height: Math.max(3, strokeForAwg(selectedWire.awg)), background: selectedWire.color }} />
+            <div className="txt">
+              <b>{awgInfo(selectedWire.awg).label}</b> \u00b7 {awgInfo(selectedWire.awg).mm} mm<br />
+              ~{awgInfo(selectedWire.awg).amps}A ref. ampacity
+            </div>
+          </div>
+          <div className="field">
+            <label className="field-label">Wire gauge</label>
+            <select className="field-input" value={selectedWire.awg} onChange={e => onUpdateWire(selectedWire.id, { awg: e.target.value })}>
+              {AWG_TABLE.map(a => <option key={a.awg} value={a.awg}>{a.label} \u2014 {a.mm} mm</option>)}
+            </select>
+          </div>
+          <div className="field">
+            <label className="field-label">Wire color</label>
+            <div className="swatch-row">
+              {WIRE_COLORS.map(col => (
+                <div key={col} className={"swatch" + (selectedWire.color === col ? " active" : "")} style={{ background: col }} onClick={() => onUpdateWire(selectedWire.id, { color: col })} />
+              ))}
+            </div>
+          </div>
+          <button className="tbtn danger" style={{ width: "100%", border: "1px solid var(--border)" }} onClick={onDelete}><Ico.trash /> Delete wire</button>
+        </div>
+      )}
+
+      {!selectedComponent && !selectedWire && (
+        <React.Fragment>
+          <div className="panel-section">
+            <p className="panel-heading">New wire defaults</p>
+            <div className="gauge-preview">
+              <div className="bar" style={{ width: 34, height: Math.max(3, strokeForAwg(defaultAwg)), background: defaultColor }} />
+              <div className="txt"><b>{awgInfo(defaultAwg).label}</b> \u00b7 {awgInfo(defaultAwg).mm} mm<br />~{awgInfo(defaultAwg).amps}A ref. ampacity</div>
+            </div>
+            <div className="field">
+              <label className="field-label">Gauge (AWG / mm)</label>
+              <select className="field-input" value={defaultAwg} onChange={e => setDefaultAwg(e.target.value)}>
+                {AWG_TABLE.map(a => <option key={a.awg} value={a.awg}>{a.label} \u2014 {a.mm} mm</option>)}
+              </select>
+            </div>
+            <div className="field">
+              <label className="field-label">Color</label>
+              <div className="swatch-row">
+                {WIRE_COLORS.map(col => (
+                  <div key={col} className={"swatch" + (defaultColor === col ? " active" : "")} style={{ background: col }} onClick={() => setDefaultColor(col)} />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="panel-section">
+            <p className="panel-heading">Board</p>
+            <div className="stat-row"><span className="k">Components</span><span className="v">{componentCount}</span></div>
+            <div className="stat-row"><span className="k">Wires</span><span className="v">{wireCount}</span></div>
+          </div>
+
+          <div className="panel-section">
+            <p className="panel-heading">AWG reference</p>
+            <table className="awg-table">
+              <thead><tr><th>AWG</th><th>mm</th><th>Amps</th></tr></thead>
+              <tbody>
+                {AWG_TABLE.map(a => (
+                  <tr key={a.awg}><td>{a.awg}</td><td>{a.mm}</td><td>{a.amps}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </React.Fragment>
+      )}
+    </React.Fragment>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
